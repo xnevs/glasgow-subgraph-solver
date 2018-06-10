@@ -13,6 +13,7 @@
 #include <numeric>
 #include <optional>
 #include <random>
+#include <set>
 #include <type_traits>
 #include <utility>
 
@@ -33,6 +34,7 @@ using std::next;
 using std::numeric_limits;
 using std::optional;
 using std::pair;
+using std::set;
 using std::sort;
 using std::string;
 using std::swap;
@@ -681,8 +683,15 @@ namespace
                 return SearchResult::Unsatisfiable;
         }
 
-        auto initialise_domains(Domains & domains, bool presolve) -> bool
+        auto initialise_domains(Result & result, Domains & domains, bool presolve) -> bool
         {
+            vector<set<int> > pattern_single_vertex_cuts(max_graphs), target_single_vertex_cuts(max_graphs);
+            unsigned cutset_eliminations = 0;
+            if (params.cutsets && ! presolve) {
+                check_cutsets(result, pattern_graph_rows, pattern_size, "pattern", pattern_single_vertex_cuts);
+                check_cutsets(result, target_graph_rows, target_size, "target", target_single_vertex_cuts);
+            }
+
             int graphs_to_consider = presolve ? 1 : max_graphs;
             if ((! presolve) && params.induced) {
                 // when looking at the complement graph, if the largest degree
@@ -763,12 +772,23 @@ namespace
                         }
                     }
 
+                    if (ok && params.cutsets && ! params.presolve) {
+                        for (int g = 0 ; g < max_graphs && ok ; ++g)
+                            if (target_single_vertex_cuts[g].count(j) && ! pattern_single_vertex_cuts[g].count(i))
+                                ok = false;
+
+                        if (! ok)
+                            ++cutset_eliminations;
+                    }
+
                     if (ok)
                         domains.at(i).values.set(j);
                 }
 
                 domains.at(i).count = domains.at(i).values.count();
             }
+
+            result.extra_stats.emplace_back("cutset_eliminations = " + to_string(cutset_eliminations));
 
             BitSetType_ domains_union{ target_size, 0 };
             for (auto & d : domains)
@@ -867,6 +887,51 @@ namespace
             result.extra_stats.push_back(where);
         }
 
+        auto check_cutsets(Result & result, auto & rows, int size, const string & role, vector<set<int> > & single_vertex_cuts_by_graph) -> void
+        {
+            for (int g = 0 ; g < max_graphs ; ++g) {
+                int n_components_originally = 0;
+
+                for (int forbid = -1 ; forbid < size ; ++forbid) {
+                    set<int> seen, pending, unseen;
+                    int n_components = 0;
+
+                    for (int i = 0 ; i < size ; ++i)
+                        if (i != forbid)
+                            unseen.insert(i);
+
+                    for (int component = *unseen.begin() ; ! unseen.empty() ; component = *unseen.begin()) {
+                        unseen.erase(component);
+                        pending.insert(component);
+
+                        for (int i = *pending.begin() ; ! pending.empty() ; i = *pending.begin()) {
+                            pending.erase(i);
+                            seen.insert(i);
+
+                            auto ni = rows[i * max_graphs + g];
+                            for (auto j = ni.find_first() ; j != decltype(ni)::npos ; j = ni.find_first()) {
+                                ni.reset(j);
+                                if (unseen.count(j)) {
+                                    unseen.erase(j);
+                                    pending.insert(j);
+                                }
+                            }
+                        }
+
+                        ++n_components;
+                    }
+
+                    if (-1 == forbid)
+                        n_components_originally = n_components;
+                    else if (1 == n_components_originally && n_components > n_components_originally)
+                        single_vertex_cuts_by_graph[g].emplace(forbid);
+                }
+
+                if (! single_vertex_cuts_by_graph[g].empty())
+                    result.extra_stats.emplace_back(role + "_" + to_string(g) + "_cutsets = " + to_string(single_vertex_cuts_by_graph[g].size()));
+            }
+        };
+
         auto solve() -> Result
         {
             Result result;
@@ -907,7 +972,7 @@ namespace
 
             // domains
             Domains domains(pattern_size, Domain{ target_size });
-            if (! initialise_domains(domains, false)) {
+            if (! initialise_domains(result, domains, false)) {
                 result.complete = true;
                 return result;
             }
@@ -1054,7 +1119,7 @@ namespace
 
             // domains
             Domains domains(pattern_size, Domain{ target_size });
-            if (! initialise_domains(domains, true)) {
+            if (! initialise_domains(result, domains, true)) {
                 result.complete = true;
                 return result;
             }

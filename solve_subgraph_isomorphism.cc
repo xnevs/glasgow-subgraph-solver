@@ -111,7 +111,11 @@ auto main(int argc, char * argv[]) -> int
             ("timeout",            po::value<int>(),         "Abort after this many seconds")
             ("format",             po::value<std::string>(), "Specify input file format (auto, lad, labelledlad, dimacs)")
             ("induced",                                      "Solve the induced version")
-            ("enumerate",                                    "Count the number of solutions")
+            ("enumerate",                                    "Count the number of solutions");
+
+        po::options_description algorithm_options{ "Algorithm options" };
+        algorithm_options.add_options()
+            ("cutsets",                                      "Try cutset constraints (hacky, experimental)")
             ("presolve",                                     "Try presolving (hacky, experimental, possibly useful for easy instances");
 
         po::options_description all_options{ "All options" };
@@ -121,6 +125,7 @@ auto main(int argc, char * argv[]) -> int
             ;
 
         all_options.add(display_options);
+        all_options.add(algorithm_options);
 
         po::positional_options_description positional_options;
         positional_options
@@ -140,6 +145,7 @@ auto main(int argc, char * argv[]) -> int
             cout << "Usage: " << argv[0] << " [options] pattern target" << endl;
             cout << endl;
             cout << display_options << endl;
+            cout << algorithm_options << endl;
             return EXIT_SUCCESS;
         }
 
@@ -157,6 +163,7 @@ auto main(int argc, char * argv[]) -> int
         params.induced = options_vars.count("induced");
         params.enumerate = options_vars.count("enumerate");
         params.presolve = options_vars.count("presolve");
+        params.cutsets = options_vars.count("cutsets");
 
         char hostname_buf[255];
         if (0 == gethostname(hostname_buf, 255))

@@ -24,6 +24,9 @@ struct Params
     /// Presolve?
     bool presolve = false;
 
+    /// Look for 1-vertex cutsets?
+    bool cutsets = false;
+
     /// Default chosen by SMAC
     static constexpr unsigned long long dodgy_default_magic_luby_multiplier = 660;
 
