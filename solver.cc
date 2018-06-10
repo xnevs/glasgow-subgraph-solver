@@ -685,11 +685,13 @@ namespace
 
         auto initialise_domains(Result & result, Domains & domains, bool presolve) -> bool
         {
-            vector<set<int> > pattern_single_vertex_cuts(max_graphs), target_single_vertex_cuts(max_graphs);
-            unsigned cutset_eliminations = 0;
-            if (params.cutsets && ! presolve) {
-                check_cutsets(result, pattern_graph_rows, pattern_size, "pattern", pattern_single_vertex_cuts);
-                check_cutsets(result, target_graph_rows, target_size, "target", target_single_vertex_cuts);
+            vector<vector<int> > pattern_component_sizes, target_component_sizes;
+            unsigned component_eliminations = 0;
+            if (params.components && ! presolve) {
+                pattern_component_sizes = vector(max_graphs, vector(pattern_size, 0));
+                target_component_sizes = vector(max_graphs, vector(target_size, 0));
+                check_components(pattern_graph_rows, pattern_size, pattern_component_sizes);
+                check_components(target_graph_rows, target_size, target_component_sizes);
             }
 
             int graphs_to_consider = presolve ? 1 : max_graphs;
@@ -772,13 +774,13 @@ namespace
                         }
                     }
 
-                    if (ok && params.cutsets && ! params.presolve) {
+                    if (ok && params.components && ! params.presolve) {
                         for (int g = 0 ; g < max_graphs && ok ; ++g)
-                            if (target_single_vertex_cuts[g].count(j) && ! pattern_single_vertex_cuts[g].count(i))
+                            if (pattern_component_sizes[g][i] > target_component_sizes[g][j])
                                 ok = false;
 
                         if (! ok)
-                            ++cutset_eliminations;
+                            ++component_eliminations;
                     }
 
                     if (ok)
@@ -788,7 +790,7 @@ namespace
                 domains.at(i).count = domains.at(i).values.count();
             }
 
-            result.extra_stats.emplace_back("cutset_eliminations = " + to_string(cutset_eliminations));
+            result.extra_stats.emplace_back("component_eliminations = " + to_string(component_eliminations));
 
             BitSetType_ domains_union{ target_size, 0 };
             for (auto & d : domains)
@@ -887,48 +889,37 @@ namespace
             result.extra_stats.push_back(where);
         }
 
-        auto check_cutsets(Result & result, auto & rows, int size, const string & role, vector<set<int> > & single_vertex_cuts_by_graph) -> void
+        auto check_components(auto & rows, int size, vector<vector<int> > & component_sizes) -> void
         {
             for (int g = 0 ; g < max_graphs ; ++g) {
-                int n_components_originally = 0;
+                set<int> seen, pending, unseen;
 
-                for (int forbid = -1 ; forbid < size ; ++forbid) {
-                    set<int> seen, pending, unseen;
-                    int n_components = 0;
+                for (int i = 0 ; i < size ; ++i)
+                    unseen.insert(i);
 
-                    for (int i = 0 ; i < size ; ++i)
-                        if (i != forbid)
-                            unseen.insert(i);
+                for (int component = *unseen.begin() ; ! unseen.empty() ; component = *unseen.begin()) {
+                    set<int> in_this_component;
+                    unseen.erase(component);
+                    pending.insert(component);
 
-                    for (int component = *unseen.begin() ; ! unseen.empty() ; component = *unseen.begin()) {
-                        unseen.erase(component);
-                        pending.insert(component);
+                    for (int i = *pending.begin() ; ! pending.empty() ; i = *pending.begin()) {
+                        pending.erase(i);
+                        seen.insert(i);
+                        in_this_component.insert(i);
 
-                        for (int i = *pending.begin() ; ! pending.empty() ; i = *pending.begin()) {
-                            pending.erase(i);
-                            seen.insert(i);
-
-                            auto ni = rows[i * max_graphs + g];
-                            for (auto j = ni.find_first() ; j != decltype(ni)::npos ; j = ni.find_first()) {
-                                ni.reset(j);
-                                if (unseen.count(j)) {
-                                    unseen.erase(j);
-                                    pending.insert(j);
-                                }
+                        auto ni = rows[i * max_graphs + g];
+                        for (auto j = ni.find_first() ; j != decltype(ni)::npos ; j = ni.find_first()) {
+                            ni.reset(j);
+                            if (unseen.count(j)) {
+                                unseen.erase(j);
+                                pending.insert(j);
                             }
                         }
-
-                        ++n_components;
                     }
 
-                    if (-1 == forbid)
-                        n_components_originally = n_components;
-                    else if (1 == n_components_originally && n_components > n_components_originally)
-                        single_vertex_cuts_by_graph[g].emplace(forbid);
+                    for (auto & v : in_this_component)
+                        component_sizes[g][v] = in_this_component.size();
                 }
-
-                if (! single_vertex_cuts_by_graph[g].empty())
-                    result.extra_stats.emplace_back(role + "_" + to_string(g) + "_cutsets = " + to_string(single_vertex_cuts_by_graph[g].size()));
             }
         };
 

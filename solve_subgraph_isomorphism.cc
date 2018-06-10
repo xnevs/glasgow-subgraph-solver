@@ -115,7 +115,7 @@ auto main(int argc, char * argv[]) -> int
 
         po::options_description algorithm_options{ "Algorithm options" };
         algorithm_options.add_options()
-            ("cutsets",                                      "Try cutset constraints (hacky, experimental)")
+            ("components",                                   "Try component constraints (hacky, experimental)")
             ("presolve",                                     "Try presolving (hacky, experimental, possibly useful for easy instances");
 
         po::options_description all_options{ "All options" };
@@ -163,7 +163,7 @@ auto main(int argc, char * argv[]) -> int
         params.induced = options_vars.count("induced");
         params.enumerate = options_vars.count("enumerate");
         params.presolve = options_vars.count("presolve");
-        params.cutsets = options_vars.count("cutsets");
+        params.components = options_vars.count("components");
 
         char hostname_buf[255];
         if (0 == gethostname(hostname_buf, 255))
