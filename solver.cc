@@ -685,13 +685,11 @@ namespace
 
         auto initialise_domains(Result & result, Domains & domains, bool presolve) -> bool
         {
-            vector<vector<int> > pattern_component_sizes, target_component_sizes;
+            vector<vector<vector<int> > > pattern_component_degree_sequences, target_component_degree_sequences;
             unsigned component_eliminations = 0;
             if (params.components && ! presolve) {
-                pattern_component_sizes = vector(max_graphs, vector(pattern_size, 0));
-                target_component_sizes = vector(max_graphs, vector(target_size, 0));
-                check_components(pattern_graph_rows, pattern_size, pattern_component_sizes);
-                check_components(target_graph_rows, target_size, target_component_sizes);
+                pattern_component_degree_sequences = check_components(pattern_graph_rows, pattern_size, patterns_degrees);
+                target_component_degree_sequences = check_components(target_graph_rows, target_size, targets_degrees);
             }
 
             int graphs_to_consider = presolve ? 1 : max_graphs;
@@ -776,8 +774,13 @@ namespace
 
                     if (ok && params.components && ! params.presolve) {
                         for (int g = 0 ; g < max_graphs && ok ; ++g)
-                            if (pattern_component_sizes[g][i] > target_component_sizes[g][j])
+                            if (pattern_component_degree_sequences[g][i].size() > target_component_degree_sequences[g][j].size())
                                 ok = false;
+
+                        for (int g = 0 ; g < max_graphs && ok ; ++g)
+                            for (unsigned k = 0 ; ok && k < pattern_component_degree_sequences[g][i].size() ; ++k)
+                                if (pattern_component_degree_sequences[g][i][k] > target_component_degree_sequences[g][j][k])
+                                    ok = false;
 
                         if (! ok)
                             ++component_eliminations;
@@ -889,8 +892,10 @@ namespace
             result.extra_stats.push_back(where);
         }
 
-        auto check_components(auto & rows, int size, vector<vector<int> > & component_sizes) -> void
+        auto check_components(auto & rows, int size, const vector<vector<int> > & graphs_degrees) -> vector<vector<vector<int> > >
         {
+            auto component_degree_sequences = vector(max_graphs, vector(size, vector<int>()));
+
             for (int g = 0 ; g < max_graphs ; ++g) {
                 set<int> seen, pending, unseen;
 
@@ -917,10 +922,18 @@ namespace
                         }
                     }
 
+                    vector<int> degrees_in_this_component;
                     for (auto & v : in_this_component)
-                        component_sizes[g][v] = in_this_component.size();
+                        degrees_in_this_component.push_back(graphs_degrees.at(g).at(v));
+
+                    std::sort(degrees_in_this_component.begin(), degrees_in_this_component.end(), std::greater<>());
+
+                    for (auto & v : in_this_component)
+                        component_degree_sequences[g][v] = degrees_in_this_component;
                 }
             }
+
+            return component_degree_sequences;
         };
 
         auto solve() -> Result
