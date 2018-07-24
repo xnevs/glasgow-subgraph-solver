@@ -4,6 +4,7 @@
 #include "formats/dimacs.hh"
 #include "formats/lad.hh"
 #include "formats/amalfi.hh"
+#include "formats/ldgraphs.hh"
 
 #include <fstream>
 #include <regex>
@@ -110,6 +111,8 @@ auto read_file_format(const string & format, const string & filename) -> InputGr
         return read_labelled_lad(move(infile), filename);
     else if (actual_format == "amalfi")
         return read_amalfi(move(infile), filename);
+    else if (actual_format == "ldgraphs")
+        return read_ldgraphs(move(infile), filename);
     else
         throw GraphFileError{ filename, "Unknown file format '" + format + "'" };
 }

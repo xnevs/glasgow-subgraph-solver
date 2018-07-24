@@ -6,6 +6,7 @@ SOURCES := \
     formats/lad.cc \
     formats/dimacs.cc \
     formats/amalfi.cc \
+    formats/ldgraphs.cc \
     formats/read_file_format.cc \
     solver.cc \
     fixed_bit_set.cc \
