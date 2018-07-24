@@ -26,7 +26,9 @@ namespace
 
 auto read_amalfi(ifstream && infile, const string & filename) -> InputGraph
 {
-    InputGraph result{ 0, false, false };
+    InputGraph result{ 0, false, true };  // HACK: say the graph is edge labelled,
+                                          // so that we can use add_directed_edge,
+                                          // that adds both directions -- the oposite with label "unlabeled"
 
     result.resize(read_word(infile));
     if (! infile)
