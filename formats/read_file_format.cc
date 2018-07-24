@@ -3,6 +3,7 @@
 #include "formats/read_file_format.hh"
 #include "formats/dimacs.hh"
 #include "formats/lad.hh"
+#include "formats/amalfi.hh"
 
 #include <fstream>
 #include <regex>
@@ -107,6 +108,8 @@ auto read_file_format(const string & format, const string & filename) -> InputGr
         return read_lad(move(infile), filename);
     else if (actual_format == "labelledlad")
         return read_labelled_lad(move(infile), filename);
+    else if (actual_format == "amalfi")
+        return read_amalfi(move(infile), filename);
     else
         throw GraphFileError{ filename, "Unknown file format '" + format + "'" };
 }
