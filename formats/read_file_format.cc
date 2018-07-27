@@ -5,6 +5,7 @@
 #include "formats/lad.hh"
 #include "formats/amalfi.hh"
 #include "formats/ldgraphs.hh"
+#include "formats/gfu.hh"
 
 #include <fstream>
 #include <regex>
@@ -113,6 +114,8 @@ auto read_file_format(const string & format, const string & filename) -> InputGr
         return read_amalfi(move(infile), filename);
     else if (actual_format == "ldgraphs")
         return read_ldgraphs(move(infile), filename);
+    else if (actual_format == "gfu")
+        return read_gfu(move(infile), filename);
     else
         throw GraphFileError{ filename, "Unknown file format '" + format + "'" };
 }
