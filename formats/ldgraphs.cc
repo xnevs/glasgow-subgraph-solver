@@ -4,12 +4,9 @@
 #include "formats/input_graph.hh"
 
 #include <fstream>
-#include <map>
 #include <string>
 
 using std::ifstream;
-using std::map;
-using std::pair;
 using std::string;
 using std::to_string;
 

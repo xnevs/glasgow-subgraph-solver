@@ -6,14 +6,10 @@
 #include <cstddef>
 
 #include <fstream>
-#include <map>
+#include <string>
 
 using std::ifstream;
-using std::map;
-using std::pair;
 using std::string;
-using std::to_string;
-
 namespace
 {
     uint16_t read_word(std::istream & in) {
