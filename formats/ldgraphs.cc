@@ -5,6 +5,7 @@
 
 #include <fstream>
 #include <map>
+#include <string>
 
 using std::ifstream;
 using std::map;
