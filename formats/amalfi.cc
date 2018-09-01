@@ -41,7 +41,8 @@ auto read_amalfi(ifstream && infile, const string & filename) -> InputGraph
             if (e < 0 || e >= result.size())
                 throw GraphFileError{ filename, "edge index out of bounds" };
 
-            result.add_directed_edge(r, e, "");
+            if (e != r) // CHEAT!!!  do not add loops to ensure compatibility with other algs
+                result.add_directed_edge(r, e, "");
         }
     }
 
